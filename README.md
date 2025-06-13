@@ -82,3 +82,6 @@ emotion-detector/
 
 - Face detection and emotion recognition by [face-api.js](https://github.com/justadudewhohacks/face-api.js)
 - UI components by [Material UI](https://mui.com/)
+
+## Deployed on netlify :- 
+https://real-time-emotion-detector.netlify.app/
