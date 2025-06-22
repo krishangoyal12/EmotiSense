@@ -21,18 +21,20 @@ const emotionIcons = {
 export default function App() {
   const videoRef = useRef();
   const canvasRef = useRef();
+  const imageRef = useRef();
   const [isModelsLoaded, setIsModelsLoaded] = useState(false);
   const [showEmotion, setShowEmotion] = useState("");
   const [showIcon, setShowIcon] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
   const [intervalId, setIntervalId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploadedImg, setUploadedImg] = useState(null);
 
-  // Ensure canvas always matches video size
-  const syncCanvasToVideo = () => {
-    if (videoRef.current && canvasRef.current) {
-      canvasRef.current.width = videoRef.current.videoWidth;
-      canvasRef.current.height = videoRef.current.videoHeight;
+  // Sync canvas size to match video or image
+  const syncCanvasToMedia = (media) => {
+    if (media && canvasRef.current) {
+      canvasRef.current.width = media.videoWidth || media.width;
+      canvasRef.current.height = media.videoHeight || media.height;
     }
   };
 
@@ -53,13 +55,14 @@ export default function App() {
     setIsRunning(true);
     setShowEmotion("");
     setShowIcon(null);
+    setUploadedImg(null);
 
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
     videoRef.current.srcObject = stream;
     videoRef.current.play();
 
     videoRef.current.onloadedmetadata = () => {
-      syncCanvasToVideo();
+      syncCanvasToMedia(videoRef.current);
     };
 
     const id = setInterval(async () => {
@@ -68,7 +71,7 @@ export default function App() {
         videoRef.current.readyState === 4 &&
         isModelsLoaded
       ) {
-        syncCanvasToVideo();
+        syncCanvasToMedia(videoRef.current);
         const detections = await faceapi
           .detectAllFaces(
             videoRef.current,
@@ -78,12 +81,7 @@ export default function App() {
           .withFaceExpressions();
 
         const ctx = canvasRef.current.getContext("2d");
-        ctx.clearRect(
-          0,
-          0,
-          canvasRef.current.width,
-          canvasRef.current.height
-        );
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
 
         if (detections.length > 0) {
           faceapi.draw.drawDetections(canvasRef.current, detections);
@@ -139,18 +137,68 @@ export default function App() {
     link.click();
   };
 
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploadedImg(URL.createObjectURL(file));
+    setShowEmotion("");
+    setShowIcon(null);
+
+    if (!isModelsLoaded) {
+      setLoading(true);
+      await loadModels();
+      setLoading(false);
+    }
+    // Wait for image to load before detection
+    setTimeout(async () => {
+      if (imageRef.current) {
+        syncCanvasToMedia(imageRef.current);
+        const detections = await faceapi
+          .detectAllFaces(
+            imageRef.current,
+            new faceapi.TinyFaceDetectorOptions()
+          )
+          .withFaceLandmarks()
+          .withFaceExpressions();
+
+        const ctx = canvasRef.current.getContext("2d");
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+
+        if (detections.length > 0) {
+          faceapi.draw.drawDetections(canvasRef.current, detections);
+          faceapi.draw.drawFaceLandmarks(canvasRef.current, detections);
+
+          const expressions = detections[0].expressions;
+          const sorted = Object.entries(expressions).sort(
+            (a, b) => b[1] - a[1]
+          );
+          const [emotion, confidence] = sorted[0];
+          setShowEmotion(
+            `${emotion.charAt(0).toUpperCase() + emotion.slice(1)} (${(
+              confidence * 100
+            ).toFixed(1)}%)`
+          );
+          setShowIcon(emotionIcons[emotion] || null);
+        } else {
+          setShowEmotion("No face detected");
+          setShowIcon(null);
+        }
+      }
+    }, 300);
+  };
+
   return (
     <div className="app">
       <h1>Emotion Detector</h1>
-      <div className="video-container">
-        {!isRunning ? (
+      <div className="video-container" style={{ position: "relative" }}>
+        {!isRunning && !uploadedImg ? (
           <div className="video-placeholder">
             <span className="placeholder-icon" role="img" aria-label="camera">
               📷
             </span>
             Camera not started
           </div>
-        ) : (
+        ) : isRunning ? (
           <>
             <video
               ref={videoRef}
@@ -159,14 +207,43 @@ export default function App() {
               autoPlay
               muted
               style={{ borderRadius: "10px" }}
-              onLoadedMetadata={syncCanvasToVideo}
+              onLoadedMetadata={() => syncCanvasToMedia(videoRef.current)}
             />
             <canvas
               ref={canvasRef}
               className="overlay"
-              style={{ pointerEvents: "none" }}
+              style={{
+                pointerEvents: "none",
+                position: "absolute",
+                left: 0,
+                top: 0,
+              }}
             />
           </>
+        ) : (
+          uploadedImg && (
+            <>
+              <img
+                ref={imageRef}
+                src={uploadedImg}
+                alt="Uploaded"
+                width={480}
+                height={360}
+                style={{ borderRadius: "10px", objectFit: "cover" }}
+                onLoad={() => syncCanvasToMedia(imageRef.current)}
+              />
+              <canvas
+                ref={canvasRef}
+                className="overlay"
+                style={{
+                  pointerEvents: "none",
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                }}
+              />
+            </>
+          )
         )}
       </div>
       <div className="emotion-label">
@@ -175,15 +252,45 @@ export default function App() {
       </div>
       <div className="controls">
         {!isRunning ? (
-          <button className="start-btn" onClick={startApp} disabled={loading}>
-            {loading ? "Loading..." : "Start Camera"}
-          </button>
+          <>
+            <button className="start-btn" onClick={startApp} disabled={loading}>
+              {loading ? "Loading..." : "Start Camera"}
+            </button>
+            <input
+              type="file"
+              accept="image/*"
+              style={{ marginLeft: 10 }}
+              onChange={handleImageUpload}
+              disabled={loading}
+            />
+            {uploadedImg && (
+              <button
+                style={{ marginLeft: 10 }}
+                onClick={() => {
+                  setUploadedImg(null);
+                  setShowEmotion("");
+                  setShowIcon(null);
+                  if (canvasRef.current) {
+                    const ctx = canvasRef.current.getContext("2d");
+                    ctx.clearRect(
+                      0,
+                      0,
+                      canvasRef.current.width,
+                      canvasRef.current.height
+                    );
+                  }
+                }}
+              >
+                Clear Image
+              </button>
+            )}
+          </>
         ) : (
           <>
             <button className="stop-btn" onClick={stopApp}>
               Stop
             </button>
-            <button onClick={handleSnapshot}>Snapshot</button>
+             <button onClick={handleSnapshot}>Snapshot</button>
           </>
         )}
       </div>

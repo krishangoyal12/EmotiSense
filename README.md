@@ -1,10 +1,11 @@
 # Real-Time Emotion Detector
 
-A web application that detects human emotions in real-time using your webcam, powered by [face-api.js](https://github.com/justadudewhohacks/face-api.js) and [Material UI](https://mui.com/).
+A web application that detects human emotions in real-time using your webcam or from uploaded images, powered by [face-api.js](https://github.com/justadudewhohacks/face-api.js) and [Material UI](https://mui.com/).
 
 ## Features
 
 - Real-time face detection and emotion recognition via webcam
+- Emotion detection from uploaded images
 - Visual overlay of detected faces, landmarks, and emotion probabilities
 - Snapshot functionality to capture and download current video frame
 - Responsive, modern UI with Material UI components
@@ -54,10 +55,16 @@ A web application that detects human emotions in real-time using your webcam, po
 
 ## Usage
 
-- Click **Start** to enable your webcam and begin emotion detection.
-- The app will display detected faces, landmarks, and the most probable emotion.
-- Click **Take Snapshot** to download the current frame as an image.
-- Click **Stop** to turn off the webcam and emotion detection.
+- **Webcam Detection:**
+  - Click **Start Camera** to enable your webcam and begin emotion detection.
+  - The app will display detected faces, landmarks, and the most probable emotion.
+  - Click **Take Snapshot** to download the current frame as an image.
+  - Click **Stop** to turn off the webcam and emotion detection.
+
+- **Image Upload Detection:**
+  - Use the file input to upload an image from your device.
+  - The app will automatically analyze the image and display the detected emotion.
+  - Click **Clear Image** to remove the uploaded image.
 
 ## Project Structure
 
