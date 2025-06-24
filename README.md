@@ -1,6 +1,6 @@
-# Real-Time Emotion Detector
+# EmotiSense
 
-A web application that detects human emotions in real-time using your webcam or from uploaded images, powered by [face-api.js](https://github.com/justadudewhohacks/face-api.js) and [Material UI](https://mui.com/).
+A real time emotion detector web application that detects human emotions in real-time using your webcam or from uploaded images, powered by [face-api.js](https://github.com/justadudewhohacks/face-api.js) and [Material UI](https://mui.com/).
 
 ## Features
 
