@@ -91,4 +91,4 @@ emotion-detector/
 - UI components by [Material UI](https://mui.com/)
 
 ## Deployed on netlify :- 
-https://real-time-emotion-detector.netlify.app/
+https://emoti-sense.netlify.app
